@@ -23,7 +23,7 @@ def getParser():
         help="sort in ascending order according to TERM"\
         " (apk/volume/alcohol/price/name)")
         
-    parser.add_argument("--sortd", metavar="TERM",
+    parser.add_argument("-d", "--sortd", metavar="TERM",
         help="sort in descending order")
         
     parser.add_argument("-r", "--re", action='store_true',
@@ -93,7 +93,8 @@ class Lookup(object):
             sortTerm = self.fixTermShortforms(sortTerm)
             
             if sortTerm in SORT_TERMS:
-                matchDictList.sort(key=itemgetter(sort), reverse=reverse)
+                matchDictList.sort(key=itemgetter(sortTerm),
+                    reverse=reverse)
             else:
                 print("Don't know how to sort by {}".format(args.sort))
             
