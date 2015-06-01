@@ -14,8 +14,10 @@ import sortimentdownloader
 import getimagefrominternet
 
 def getParser():
-    parser = argparse.ArgumentParser(description="AlcCalcer3",
-        prefix_chars='-/')
+    parser = argparse.ArgumentParser(
+            description="AlcCalcer3, a Systembolaget assortment searcher",
+        prefix_chars='-/' #Allow both linux and "windows-style" prefixes
+        )
         
     parser.add_argument("searchterms", type=str, nargs='+')
     
