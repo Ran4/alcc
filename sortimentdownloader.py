@@ -1,40 +1,61 @@
-import urllib2, os.path, time, pickle
+import urllib2
+import os.path
+import time
+import pickle
 
 sortimentXmlFileName = "sortiment.xml"
+ARTICLES_PICKLE_DUMP_FILENAME = "articles.pickle"
 
 def updateIfNeeded(silent=True):
     """Will download and save a new sortiment file if needed
     Returns True if update was done, False otherwise
     """
-    oldestFile = 15*24*60*60. #Only download if database is older than 15 days
+    # Only download if database is older than 15 days
+    oldestFile = 15 * 24 * 60 * 60.
     
     if os.path.exists(sortimentXmlFileName) and\
-        time.time() - os.path.getmtime(sortimentXmlFileName) < oldestFile:
+            time.time() - os.path.getmtime(sortimentXmlFileName) < oldestFile:
         creationTime = os.path.getctime(sortimentXmlFileName)
+            
+        if not os.path.exists(ARTICLES_PICKLE_DUMP_FILENAME):
+            print "Missing pickled articles file '%s', will parse XML "\
+                "and pickle..." % ARTICLES_PICKLE_DUMP_FILENAME
+            parseAndSaveArticles(silent)
         
-        #~ if not silent:
-            #~ print "The xml file created at %s is new enough" %\
-                #~ time.ctime(creationTime)
+        # ~ if not silent:
+            # ~ print "The xml file created at %s is new enough" %\
+                # ~ time.ctime(creationTime)
         return False
 
     if not silent:
-        print "Redownloading xml file since it's older than %s s (%s days)..."%\
-            (oldestFile, oldestFile/60./60./24.)
+        print "Redownloading xml file since it's older than %s s (%s days)..."\
+            % (oldestFile, oldestFile / 60. / 60. / 24.)
     downloadSortimentFile(silent)
-    
+    parseAndSaveArticles(silent)
+        
+    return True
+
+def parseAndSaveArticles(silent):
+    """Loads articles from the xml file with path sortimentXmlFileName,
+    then saves them as a pickle dump.
+    """
     if not silent:
         print "Parsing xml file..."
     articles = parseXmlFile(silent)
-    
-    #dump articles as a pickle
-    pickle.dump(articles, open("articles.pickle", "wb"))
+    saveArticlesAsPickleDump(articles, silent)
+
+def saveArticlesAsPickleDump(articles, silent=True):
+    """Takes a dict of articles and writes them to a pickled file
+    with path ARTICLES_PICKLE_DUMP_FILENAME"""
+    pickle.dump(articles, open(ARTICLES_PICKLE_DUMP_FILENAME, "wb"))
     
     if not silent:
         print "Saved articles as a articles.pickle"
-        
-    return True
     
 def parseXmlFile(silent=True):
+    """Loads xml file sortimentXmlFileName and parses parts of it's XML content.
+    Returns an articles dictionary.
+    """
     startTime = time.time()
     
     with open(sortimentXmlFileName) as f:
@@ -44,21 +65,25 @@ def parseXmlFile(silent=True):
     rawFullArticle = rawXml.split("</artikel>")[:-1]
     
     articles = []
-    #fullKeyList = "nr,Artikelid,Varnummer,Namn,Namn2,Prisinklmoms,Volymiml,PrisPerLiter,Saljstart,Slutlev,Varugrupp,Forpackning,Forslutning,Ursprung,Ursprunglandnamn,Producent,Leverantor,Argang,Provadargang,Alkoholhalt,Modul,Sortiment,Ekologisk,Koscher".split(",")
-    keyList = "Namn,Namn2,Prisinklmoms,Volymiml,Alkoholhalt,Artikelid,Varnummer,Varugrupp".split(",")
+    # fullKeyList = "nr,Artikelid,Varnummer,Namn,Namn2,Prisinklmoms,Volymiml,
+    # PrisPerLiter,Saljstart,Slutlev,Varugrupp,Forpackning,Forslutning,Ursprung,
+    # Ursprunglandnamn,Producent,Leverantor,Argang,Provadargang,Alkoholhalt,
+    # Modul,Sortiment,Ekologisk,Koscher".split(",")
+    keyList = "Namn,Namn2,Prisinklmoms,Volymiml,Alkoholhalt,Artikelid,"\
+        "Varnummer,Varugrupp".split(",")
     for rawArticle in rawFullArticle[:]:
         rawArticle = rawArticle.split("<artikel>")[1]
         
         article = {}
         for key in keyList:
             if "<%s>" % key not in rawArticle:
-                article[key] = "" #none found
+                article[key] = ""  #none found
                 continue
                 
             val = rawArticle.split("<%s>" % key)[1].split("</%s>" % key)[0]
             
             if key == "Alkoholhalt":
-                #remove the last percent sign and make to float, eg. "40%" -> 40
+                # Remove the last percent sign and make to float, eg. "40%"->40
                 val = float(val[:-1])
                 
             if key == "Prisinklmoms" or key == "Volymiml":
@@ -66,7 +91,7 @@ def parseXmlFile(silent=True):
             
             article[key] = val
         
-        #calculate and add apk information
+        # Calculate and add apk information
         alc = article["Alkoholhalt"]
         volume = article["Volymiml"]
         price = article["Prisinklmoms"]
@@ -74,9 +99,9 @@ def parseXmlFile(silent=True):
         
         articles.append(article)
         
-        #~ for key, val in article.items():
-            #~ print key + ":", val
-        #~ print
+        # ~ for key, val in article.items():
+            # ~ print key + ":", val
+        # ~ print
     
     if not silent:
         dt = time.time() - startTime

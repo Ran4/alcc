@@ -14,39 +14,42 @@ import sortimentdownloader
 import getimagefrominternet
 
 def getParser():
-    parser = argparse.ArgumentParser(
-            description="AlcCalcer3, a Systembolaget assortment searcher",
-        prefix_chars='-/' #Allow both linux and "windows-style" prefixes
-        )
+    """Returns a argparse.ArgumentParser object which is used to parse the
+    sysargs
+    """
+    arg_parser = argparse.ArgumentParser(
+        description="AlcCalcer3, a Systembolaget assortment searcher",
+        prefix_chars='-/'  #Allow both linux and "windows-style" prefixes
+    )
         
-    parser.add_argument("searchterms", type=str, nargs='+')
+    arg_parser.add_argument("searchterms", type=str, nargs='+')
     
-    parser.add_argument("-s", "--sort", metavar="TERM",
-        help="sort in ascending order according to TERM"\
+    arg_parser.add_argument("-s", "--sort", metavar="TERM",
+        help="sort in ascending order according to TERM"
         " (apk/volume/alcohol/price/name)")
         
-    parser.add_argument("-d", "--sortd", metavar="TERM",
+    arg_parser.add_argument("-d", "--sortd", metavar="TERM",
         help="sort in descending order")
         
-    parser.add_argument("-r", "--re", action='store_true',
+    arg_parser.add_argument("-r", "--re", action='store_true',
         help="search using regular expressions")
         
-    parser.add_argument("-o", "--out", dest="outfile", default="outfile.txt")
+    arg_parser.add_argument("-o", "--out", dest="outfile",
+        default="outfile.txt")
     
-    parser.add_argument("-p", "--pic", action='store_true',
+    arg_parser.add_argument("-p", "--pic", action='store_true',
         help="also downloads and shows images for all matches")
         
-    parser.add_argument("-n", type=int,
+    arg_parser.add_argument("-n", type=int,
         help="returns max n results")
         
-    parser.add_argument("-m", "--min", nargs=2, metavar=("TERM","VALUE"),
+    arg_parser.add_argument("-m", "--min", nargs=2, metavar=("TERM", "VALUE"),
         help="requires TERM to be equal to or more than VALUE")
         
-    parser.add_argument("-M", "--max", nargs=2, metavar=("TERM","VALUE"),
+    arg_parser.add_argument("-M", "--max", nargs=2, metavar=("TERM", "VALUE"),
         help="requires TERM to be equal to or less than VALUE")
     
-    return parser
-    
+    return arg_parser
     
 class Lookup(object):
     """Class that looks up objects in Systembolaget.
@@ -58,14 +61,18 @@ class Lookup(object):
         
     def loadArticles(self):
         """Makes sure that the articles are loaded into memory
+        by loading them from a pickled file (which is generated and/or
+        downloaded if needed using sortimentdownloader.py)
         """
-        sortimentdownloader.updateIfNeeded(silent=False)
+        update_was_performed = sortimentdownloader.updateIfNeeded(silent=False)
         
         if not self.articles:
-            #Didn't just download the article, so we need to load them
+            # Didn't just download the article, so we need to load them
             self.articles = pickle.load(open("articles.pickle", "rb"))
             
     def fixTermShortforms(self, term):
+        """Takes a string term and changes occurances of e.g. "vol"->"volume"
+        """
         term = term.replace("volym", "volume")
         if term == "vol":
             term = "volume"
@@ -117,7 +124,7 @@ class Lookup(object):
         fullArticleName = (article["Namn"] + " " + article["Namn2"]).lower()
         
         if args.re:
-            print("Regexp Not implemented yet!")
+            print "Regexp Not implemented yet!"
             return False
         else:
             return st in article["Namn"].lower() or\
@@ -126,6 +133,9 @@ class Lookup(object):
                 st == article["Varnummer"].lower()
         
     def lookupTermInArticle(self, args, st, article):
+        """
+        Returns a matchDict of matching
+        """
         fullArticleName = (article["Namn"] + " " + article["Namn2"]).lower()
         
         matchDict = None
@@ -133,17 +143,18 @@ class Lookup(object):
             matchString = "%s%s %d cl has apk: %.2f" %\
                 (article["Namn"],
                 " " + article["Namn2"] if article["Namn2"] else "",
-                article["Volymiml"]/10,
+                article["Volymiml"] / 10,
                 article["apk"])
                 
-            matchDict = {'matchString':matchString,
-                'apk':article["apk"],
-                "volume":article["Volymiml"]/10,
-                "alcohol":article["Alkoholhalt"],
-                "price":article["Prisinklmoms"],
-                "name":fullArticleName,
-                "type":article["Varugrupp"],
-                }
+            matchDict = {
+                'matchString': matchString,
+                'apk': article["apk"],
+                "volume": article["Volymiml"] / 10,
+                "alcohol": article["Alkoholhalt"],
+                "price": article["Prisinklmoms"],
+                "name": fullArticleName,
+                "type": article["Varugrupp"],
+            }
                 
             if args.pic:
                 number = article["Varnummer"]
@@ -168,7 +179,7 @@ class Lookup(object):
                     value = int(value)
                     
                 if matchDict[term] > value:
-                    #print "ignored {} since MAX found".format(matchDict)
+                    # print "ignored {} since MAX found".format(matchDict)
                     return None
                     
         if args.min and matchDict:
@@ -187,15 +198,17 @@ class Lookup(object):
                     value = int(value)
                 
                 if matchDict[term] < value:
-                    #print "ignored {} since MIN found".format(matchDict)
+                    # print "ignored {} since MIN found".format(matchDict)
                     return None
+                
+        #print "matchDict:", matchDict
                     
         return matchDict
     
     def lookup(self, args):
-        self.loadArticles() #makes sure that the article dict is updated
+        self.loadArticles()  #makes sure that the article dict is updated
         
-        #print "ready to start lookup!"
+        # print "ready to start lookup!"
         
         matchDictList = []
         for st in args.searchterms:
@@ -204,12 +217,12 @@ class Lookup(object):
                 if matchDict:
                     matchDictList.append(matchDict)
                     
-                    #~ print
-                    #~ print article
+                    # ~ print
+                    # ~ print article
                     
-                    #~ print "varugrupp:"
-                    #~ print article["Varugrupp"]
-                    #~ import pdb; pdb.set_trace()
+                    # ~ print "varugrupp:"
+                    # ~ print article["Varugrupp"]
+                    # ~ import pdb; pdb.set_trace()
                 
         self.printMatchDictList(args, matchDictList)
 
@@ -219,13 +232,14 @@ def main():
     
     if len(sys.argv) > 1:
         args = parser.parse_args()
-    else: #nothing was given, assume --help
-        #argStr = 'bellman pripps'
-        #args = parser.parse_args(argStr.split())
+    else:
+        # Nothing was given, assume --help
+        # argStr = 'bellman pripps'
+        # args = parser.parse_args(argStr.split())
         argStr = "--help"
         args = parser.parse_args(argStr.split())
         
-    #print args
+    # print args
 
     lookup = Lookup()
     lookup.lookup(args)

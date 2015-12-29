@@ -1,4 +1,5 @@
-import urllib2, os.path
+import urllib2
+import os.path
 
 from os.path import join as opj
 import os
@@ -21,13 +22,13 @@ def downloadImage(productNumber, verbose=False, overWrite=False):
 
     for line in htmlData.split("\n"):
         
-        #~ print line
-        #~ print
+        # ~ print line
+        # ~ print
         
         if "_EnlargePicture" in line:
-            #print "line:", line
+            # print "line:", line
             partOfUrl = line.split("<a href=\"")[1].split("\" id=")[0]
-            #eg. /ImageVaultFiles/id_16592/cf_1915/26729.JPG
+            # Eg. /ImageVaultFiles/id_16592/cf_1915/26729.JPG
             imageUrl = "http://www.systembolaget.se" + partOfUrl
             imageName = partOfUrl.split("/")[-1]
             imageData = urllib2.urlopen(imageUrl).read()
@@ -42,5 +43,5 @@ def downloadImage(productNumber, verbose=False, overWrite=False):
     return None
 
 if __name__ == "__main__":
-    for productNumber in range(1,250):
+    for productNumber in range(1, 250):
         downloadImage(str(productNumber))
