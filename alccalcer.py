@@ -8,12 +8,14 @@ alccalcer.py --help shows usage.
 import argparse
 import sys
 import pickle
+import os
 from operator import itemgetter
 
 import sortimentdownloader
 import getimagefrominternet
 
-def getParser():
+
+def get_parser():
     """Returns a argparse.ArgumentParser object which is used to parse the
     sysargs
     """
@@ -35,7 +37,7 @@ def getParser():
         help="search using regular expressions")
         
     arg_parser.add_argument("-o", "--out", dest="outfile",
-        default="outfile.txt")
+            default="outfile.txt")
     
     arg_parser.add_argument("-p", "--pic", action='store_true',
         help="also downloads and shows images for all matches")
@@ -59,18 +61,19 @@ class Lookup(object):
     def __init__(self):
         self.articles = None
         
-    def loadArticles(self):
+    def load_articles(self):
         """Makes sure that the articles are loaded into memory
         by loading them from a pickled file (which is generated and/or
         downloaded if needed using sortimentdownloader.py)
         """
-        update_was_performed = sortimentdownloader.updateIfNeeded(silent=False)
+        update_was_performed = \
+            sortimentdownloader.update_if_needed(silent=False)
         
         if not self.articles:
             # Didn't just download the article, so we need to load them
             self.articles = pickle.load(open("articles.pickle", "rb"))
             
-    def fixTermShortforms(self, term):
+    def fix_term_shortforms(self, term):
         """Takes a string term and changes occurances of e.g. "vol"->"volume"
         """
         term = term.replace("volym", "volume")
@@ -85,7 +88,7 @@ class Lookup(object):
             
         return term
             
-    def printMatchDictList(self, args, matchDictList):
+    def print_match_dict_list(self, args, match_dict_list):
         """Takes a list of match dictionaries, sorts them
         if args.sort or args.sortd is set, then prints them to stdout
         """
@@ -93,129 +96,136 @@ class Lookup(object):
         if args.sort or args.sortd:
             
             if args.sortd:
-                sortTerm = args.sortd
+                sort_term = args.sortd
                 reverse = True
             else:
-                sortTerm = args.sort
+                sort_term = args.sort
                 reverse = False
             
-            sortTerm = self.fixTermShortforms(sortTerm)
+            sort_term = self.fix_term_shortforms(sort_term)
             
-            if sortTerm in SORT_TERMS:
-                matchDictList.sort(key=itemgetter(sortTerm),
+            if sort_term in SORT_TERMS:
+                match_dict_list.sort(key=itemgetter(sort_term),
                     reverse=reverse)
             else:
-                print("Don't know how to sort by {}".format(args.sort))
+                print "Don't know how to sort by {}".format(args.sort)
             
-        numPrinted = 0
+        num_printed = 0
         
-        for matchDict in matchDictList:
-            numPrinted += 1
+        for match_dict in match_dict_list:
+            num_printed += 1
             
-            if args.n is not None and numPrinted > args.n:
+            if args.n is not None and num_printed > args.n:
                 break
                 
-            print matchDict["matchString"]
+            print match_dict["match_str"]
             
-    def doesSearchtermMatchArticle(self, args, st, article):
-        """Returns True if search term string st can be deemed to match
-        the article article. Will use regular expressions if args.re is True
+    def does_searchterm_match_article(self, args, search_string, article):
+        """Returns True if search term string search_string can be deemed to
+        match the article article.
+        Will use regular expressions if args.re is True
         """
-        fullArticleName = (article["Namn"] + " " + article["Namn2"]).lower()
+        full_article_name = (article["Namn"] + " " + article["Namn2"]).lower()
         
         if args.re:
             print "Regexp Not implemented yet!"
             return False
         else:
-            return st in article["Namn"].lower() or\
-                st in fullArticleName or\
-                st == article["Artikelid"].lower() or\
-                st == article["Varnummer"].lower()
+            return search_string in article["Namn"].lower() or\
+                search_string in full_article_name or\
+                search_string == article["Artikelid"].lower() or\
+                search_string == article["Varnummer"].lower()
         
-    def lookupTermInArticle(self, args, st, article):
+    def lookup_term_in_article(self, args, search_string, article):
         """
-        Returns a matchDict of matching
+        Returns a match_dict of matching
         """
-        fullArticleName = (article["Namn"] + " " + article["Namn2"]).lower()
+        full_article_name = (article["Namn"] + " " + article["Namn2"]).lower()
         
-        matchDict = None
-        if self.doesSearchtermMatchArticle(args, st, article):
-            matchString = "%s%s %d cl has apk: %.2f" %\
+        match_dict = None
+        if self.does_searchterm_match_article(args, search_string, article):
+            match_str = "%s%s %d cl has apk: %.2f" %\
                 (article["Namn"],
                 " " + article["Namn2"] if article["Namn2"] else "",
                 article["Volymiml"] / 10,
                 article["apk"])
                 
-            matchDict = {
-                'matchString': matchString,
+            match_dict = {
+                'match_str': match_str,
                 'apk': article["apk"],
                 "volume": article["Volymiml"] / 10,
                 "alcohol": article["Alkoholhalt"],
                 "price": article["Prisinklmoms"],
-                "name": fullArticleName,
+                "name": full_article_name,
                 "type": article["Varugrupp"],
             }
                 
             if args.pic:
                 number = article["Varnummer"]
-                imageFilePath = getimagefrominternet.downloadImage(number)
+                image_filepath = getimagefrominternet.download_image(number)
                 
-                if imageFilePath:
-                    os.system(imageFilePath)
+                if image_filepath:
+                    # Open the image using os.system: not optimal
+                    os.system(image_filepath)
                     
-        if args.max and matchDict:
+        if args.max and match_dict:
             term, value = args.max
             
-            term = self.fixTermShortforms(term)
+            term = self.fix_term_shortforms(term)
             
-            if term not in matchDict:
+            if term not in match_dict:
                 print "Don't know how to filter by {}".format(term)
                 exit()
                 
             else:
-                if type(matchDict[term]) == float:
+                if type(match_dict[term]) == float:
                     value = float(value)
-                elif type(matchDict[term]) == int:
+                elif type(match_dict[term]) == int:
                     value = int(value)
                     
-                if matchDict[term] > value:
-                    # print "ignored {} since MAX found".format(matchDict)
+                if match_dict[term] > value:
+                    # print "ignored {} since MAX found".format(match_dict)
                     return None
                     
-        if args.min and matchDict:
+        if args.min and match_dict:
             term, value = args.min
             
-            term = self.fixTermShortforms(term)
+            term = self.fix_term_shortforms(term)
             
-            if term not in matchDict:
+            if term not in match_dict:
                 print "Don't know how to filter by {}".format(term)
                 exit()
             else:
                 
-                if type(matchDict[term]) == float:
+                if type(match_dict[term]) == float:
                     value = float(value)
-                elif type(matchDict[term]) == int:
+                elif type(match_dict[term]) == int:
                     value = int(value)
                 
-                if matchDict[term] < value:
-                    # print "ignored {} since MIN found".format(matchDict)
+                if match_dict[term] < value:
+                    # print "ignored {} since MIN found".format(match_dict)
                     return None
                 
-        #print "matchDict:", matchDict
+        # print "match_dict:", match_dict
                     
-        return matchDict
+        return match_dict
     
     def lookup(self, args):
-        self.loadArticles()  #makes sure that the article dict is updated
+        """Given an argument list args, performs a lookup of articles.
+        The articles are automatically loaded (and updated if needed) from
+        the internet.
+        """
+        self.load_articles()  #makes sure that the article dict is updated
         
         # print "ready to start lookup!"
         
-        matchDictList = []
-        for st in args.searchterms:
+        match_dict_list = []
+        for search_string in args.searchterms:
             for article in self.articles:
-                matchDict = self.lookupTermInArticle(args, st, article)
-                if matchDict:
-                    matchDictList.append(matchDict)
+                match_dict = self.lookup_term_in_article(args,
+                     search_string, article)
+                if match_dict:
+                    match_dict_list.append(match_dict)
                     
                     # ~ print
                     # ~ print article
@@ -224,20 +234,20 @@ class Lookup(object):
                     # ~ print article["Varugrupp"]
                     # ~ import pdb; pdb.set_trace()
                 
-        self.printMatchDictList(args, matchDictList)
+        self.print_match_dict_list(args, match_dict_list)
 
 def main():
     global parser
-    parser = getParser()
+    parser = get_parser()
     
     if len(sys.argv) > 1:
         args = parser.parse_args()
     else:
         # Nothing was given, assume --help
-        # argStr = 'bellman pripps'
-        # args = parser.parse_args(argStr.split())
-        argStr = "--help"
-        args = parser.parse_args(argStr.split())
+        # arg_str = 'bellman pripps'
+        # args = parser.parse_args(arg_str.split())
+        arg_str = "--help"
+        args = parser.parse_args(arg_str.split())
         
     # print args
 
