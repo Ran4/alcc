@@ -171,7 +171,7 @@ class Lookup(object):
         if args.max and match_dict:
             term, value = args.max
             
-            term = self.fix_term_shortforms(term)
+            term = self.fix_term_shortforms(term).lower()
             
             if term not in match_dict:
                 print "Don't know how to filter by {}".format(term)
@@ -190,7 +190,7 @@ class Lookup(object):
         if args.min and match_dict:
             term, value = args.min
             
-            term = self.fix_term_shortforms(term)
+            term = self.fix_term_shortforms(term).lower()
             
             if term not in match_dict:
                 print "Don't know how to filter by {}".format(term)
