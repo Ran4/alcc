@@ -244,9 +244,9 @@ def main():
         args = parser.parse_args()
     else:
         # Nothing was given, assume --help
-        # arg_str = 'bellman pripps'
         # args = parser.parse_args(arg_str.split())
         arg_str = "--help"
+        #arg_str = 'bellman pripps'
         args = parser.parse_args(arg_str.split())
         
     # print args
